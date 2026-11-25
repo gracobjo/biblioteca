@@ -87,6 +87,21 @@ Se recomiendan índices únicos en `libros.isbn` y `socios.email` para proteger 
 3. `Repositorio.sesion()` abre una conexión y un cursor de diccionario, confirma al terminar y solicita `rollback` si se produce una excepción; cierra cursor y conexión.
 4. `configuracion()` proporciona los parámetros para cada conexión nueva.
 
+### El repositorio en los diagramas
+
+En los [diagramas UML](casos_de_uso_y_diagramas_uml.md), **Repositorio** no significa la aplicación completa ni un repositorio de Git o GitHub. Representa la capa de acceso a datos, implementada por la clase `Repositorio` de [`database.py`](../database.py). Este componente sigue el patrón Repository: ofrece operaciones a la interfaz y a los servicios, y las aísla de los detalles de conexión y consultas SQL. En esta aplicación también contiene reglas de negocio y gestiona las transacciones.
+
+En el diagrama de secuencia de registrar una devolución, los participantes corresponden a:
+
+| Participante | Componente | Responsabilidad en la devolución |
+|---|---|---|
+| Bibliotecario | Usuario humano | Selecciona un préstamo y pulsa el botón de registrar devolución. |
+| Biblioteca (Tkinter) | Clase `Biblioteca` de [`app.py`](../app.py) | Captura el evento, llama a `Repositorio.devolver(id_prestamo)`, muestra el resultado y actualiza las vistas. |
+| Repositorio | Clase `Repositorio` de [`database.py`](../database.py) | Comprueba el préstamo mediante `SELECT ... FOR UPDATE`, actualiza la devolución y el stock con `UPDATE` y gestiona `commit` o `rollback`. |
+| MySQL | Servidor de base de datos | Ejecuta las sentencias y almacena los cambios confirmados. |
+
+[`services.py`](../services.py) proporciona validaciones y servicios de importación y exportación que también usan el repositorio, pero no interviene en la devolución desde el botón. El diagrama resume la respuesta como «Operación completada» o «Error»: `devolver()` no devuelve esos textos, sino que termina sin valor en caso de éxito o propaga una excepción; la interfaz muestra el mensaje correspondiente. Así, `app.py` es la cara visible y `database.py` el componente que habla SQL con MySQL, sin que la interfaz escriba esas consultas.
+
 Las búsquedas usan `LIKE` con parámetros y las listas de libros y socios usan `LIMIT`/`OFFSET`, 15 filas por página y una consulta adicional para detectar la página siguiente. El listado de préstamos no está paginado y se ordena por ID ascendente.
 
 Los valores SQL se pasan mediante `%s`; el fragmento de condición del filtro de préstamos se selecciona de un diccionario fijo, no de texto arbitrario del usuario. Mantenga esta separación al añadir consultas.
